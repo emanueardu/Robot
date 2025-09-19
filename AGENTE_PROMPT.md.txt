@@ -1,0 +1,46 @@
+# Prompt General – Proyecto Robot Pi5 + ESP32
+
+Este proyecto es un **robot aspirador inteligente** basado en:
+
+- **Raspberry Pi 5** como unidad central de procesamiento.
+- **ESP32** como sensor/actuador, encargado de:
+  - Relés (aspiradora, escobillas, bomba).
+  - Sensores (DHT11, ultrasonido, MPU6050).
+  - Comunicación serie rápida con la Pi.
+
+La Pi 5 maneja:
+- **Expresiones faciales (OLEDs)** → archivo `ojos_mqtt.py`  
+  Maneja los ojos del robot y sus expresiones, controlado vía MQTT y Firebase.  
+
+- **Servos y cámara** → archivo `servos_mqqt.py`  
+  Control de dos servos que mueven la caja con la cámara y OLEDs (inclinación -30° a +90°).  
+
+- **Lectura de ESP32** → archivo `motores_mqqt.py`  
+  Comunicación por UART con el ESP32. Recibe datos crudos de sensores y cambios de estado (switches, IR, yaw).  
+
+- **Firebase** → archivo `firebase_mqtt.py`  
+  Envía datos leídos (estado, sensores, batería, ubicación, etc.) a Firebase Realtime Database.  
+
+Codigo cargado eb esp32: "ESP32.ino"
+
+---
+
+## 🎯 Objetivos del agente
+- Mantener los archivos organizados y modulares.  
+- Asegurar que **todo el código funcione junto**, sin romper compatibilidad.  
+- Optimizar redundancias (ej: funciones repetidas).  
+- Documentar las funciones con comentarios claros.  
+- Proponer mejoras de eficiencia o legibilidad.  
+- Facilitar integración futura con:
+  - Navegación (mapa de la casa en `Plano casa.pdf`).  
+  - App móvil (React Native + Firebase).  
+  - Control remoto y órdenes de limpieza.  
+
+---
+
+## 🔧 Forma de trabajo pedida
+- No borrar lógica existente, solo modularizar y optimizar.  
+- Crear nuevos módulos si es necesario (`comm.py`, `utils.py`).  
+- Mantener la comunicación Pi ↔ ESP32 rápida (sin bloqueos).  
+- Preparar hooks para agregar lógica de navegación y app móvil.  
+- Siempre que modifiques, dejar comentarios explicando el cambio.  

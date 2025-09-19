@@ -1,0 +1,251 @@
+#include <Arduino.h>
+#include <Wire.h>
+
+/**** UARTs ****/
+#define PC_BAUD 115200
+#define PI_BAUD 115200
+const int PI_RX = 16; // RX2 ESP32 <- TX Raspberry
+const int PI_TX = 17; // TX2 ESP32 -> RX Raspberry
+
+/**** Relés (pinout ORIGINAL) ****/
+const int RELAY_VAC   = 4;   // Aspiradora
+const int RELAY_BRUSH = 19;  // Escobillas
+const bool RELAY_ACTIVE_LOW = true; // poné false si tus relés son activos HIGH
+
+/**** L298N – Ruedas (pinout ORIGINAL) ****/
+const int ENA = 5;    // PWM IZQ
+const int IN1 = 25;   // DIR IZQ
+const int IN2 = 26;
+const int ENB = 18;   // PWM DER
+const int IN3 = 32;   // DIR DER
+const int IN4 = 33;
+const uint8_t PWM_SPEED = 200;
+
+/**** Sensores ****/
+const int PIN_VOLTAGE = 36; // ADC1_CH0 – módulo 0–25V (5:1)
+const int PIN_CURRENT = 39; // ADC1_CH3 – ACS712
+const int PIN_BUMP_L  = 13; // bumper izq (a GND, INPUT_PULLUP)
+const int PIN_BUMP_R  = 12; // bumper der (a GND, INPUT_PULLUP)
+const int PIN_IR_CLIFF= 27; // cliff IR
+const int PIN_US_TRIG = 23; // HC-SR04 TRIG
+const int PIN_US_ECHO = 35; // HC-SR04 ECHO (⚠ divisor 5V->3V3)
+
+/**** MPU6050 ****/
+const uint8_t MPU_ADDR = 0x68;
+
+/**** Estado ****/
+bool vacOn=false, brushOn=false, leftOn=false, rightOn=false;
+int  cmdLeft=0, cmdRight=0;
+
+/**** Debounce eventos ****/
+const unsigned long DEBOUNCE_MS = 30;
+int lastBL = HIGH, lastBR = HIGH, lastCliff = LOW;
+unsigned long tBL=0, tBR=0, tCliff=0;
+
+/**** Calibraciones analógicas ****/
+float VOLTAGE_K = 5.53f;   // ajustado con tu multímetro
+float acs_vref  = 1.65f;   // offset ACS712 en V (se calibra en setup)
+float acs_v_per_A = 0.066f;// V/A (ACS712-30A)
+
+/**** Utils ****/
+inline void writeRelayRaw(int pin, bool on){
+  if (RELAY_ACTIVE_LOW) digitalWrite(pin, on ? LOW : HIGH);
+  else                  digitalWrite(pin, on ? HIGH : LOW);
+}
+void setVac(bool on){   vacOn=on;   writeRelayRaw(RELAY_VAC,on);   }
+void setBrush(bool on){ brushOn=on; writeRelayRaw(RELAY_BRUSH,on); }
+
+void leftWheel(bool on){
+  leftOn = on;
+  if (on){ digitalWrite(IN1,HIGH); digitalWrite(IN2,LOW);  analogWrite(ENA,PWM_SPEED); }
+  else   { analogWrite(ENA,0);     digitalWrite(IN1,LOW);  digitalWrite(IN2,LOW);      }
+}
+void rightWheel(bool on){
+  rightOn = on;
+  if (on){ digitalWrite(IN3,HIGH); digitalWrite(IN4,LOW);  analogWrite(ENB,PWM_SPEED); }
+  else   { analogWrite(ENB,0);     digitalWrite(IN3,LOW);  digitalWrite(IN4,LOW);      }
+}
+void setWheels(int L, int R){
+  cmdLeft  = constrain(L,-255,255);
+  cmdRight = constrain(R,-255,255);
+  if (cmdLeft > 0){ digitalWrite(IN1,HIGH); digitalWrite(IN2,LOW);  analogWrite(ENA, cmdLeft); leftOn=true; }
+  else if (cmdLeft < 0){ digitalWrite(IN1,LOW); digitalWrite(IN2,HIGH); analogWrite(ENA, -cmdLeft); leftOn=true; }
+  else leftWheel(false);
+  if (cmdRight > 0){ digitalWrite(IN3,HIGH); digitalWrite(IN4,LOW);  analogWrite(ENB, cmdRight); rightOn=true; }
+  else if (cmdRight < 0){ digitalWrite(IN3,LOW); digitalWrite(IN4,HIGH); analogWrite(ENB, -cmdRight); rightOn=true; }
+  else rightWheel(false);
+}
+void stopAll(){ setWheels(0,0); setVac(false); setBrush(false); }
+
+void broadcast(const String& s){ Serial.print(s); Serial2.print(s); }
+
+/**** Lecturas ****/
+float readVoltage(){
+  uint32_t mv = analogReadMilliVolts(PIN_VOLTAGE);
+  return (mv * VOLTAGE_K) / 1000.0f;
+}
+float readCurrent(){
+  int adc = analogRead(PIN_CURRENT);
+  float v = (adc/4095.0f)*3.3f;
+  return (v - acs_vref) / acs_v_per_A;
+}
+long readUS_cm(){
+  digitalWrite(PIN_US_TRIG, LOW); delayMicroseconds(2);
+  digitalWrite(PIN_US_TRIG, HIGH); delayMicroseconds(10);
+  digitalWrite(PIN_US_TRIG, LOW);
+  unsigned long dur = pulseIn(PIN_US_ECHO, HIGH, 40000UL);
+  if (!dur) return -1;
+  return (long)(dur/58UL);
+}
+bool bumpL(){ return digitalRead(PIN_BUMP_L)==LOW; }
+bool bumpR(){ return digitalRead(PIN_BUMP_R)==LOW; }
+bool cliff(){ return digitalRead(PIN_IR_CLIFF)==HIGH; }
+
+/**** MPU – lecturas crudas ****/
+int16_t mpuRead16(uint8_t reg){
+  Wire.beginTransmission(MPU_ADDR); Wire.write(reg); Wire.endTransmission(false);
+  Wire.requestFrom((int)MPU_ADDR, 2);
+  return (Wire.read()<<8) | Wire.read();
+}
+void mpuInit(){
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x6B); Wire.write(0x00); // wake up
+  Wire.endTransmission();
+  delay(50);
+}
+
+/**** Parser ****/
+String bufPC, bufPI;
+
+bool readLineFrom(Stream& in, String& buf, String& outLine){
+  while(in.available()){
+    char c = in.read();
+    if (c=='\r'||c=='\n'){ if (buf.length()){ outLine=buf; buf=""; return true; } }
+    else if (isPrintable(c)){ buf += c; if (buf.length()>120) buf.remove(0); }
+  }
+  return false;
+}
+
+void printStatus(Stream& out){
+  // Leer valores crudos del MPU
+  int16_t ax = mpuRead16(0x3B);
+  int16_t ay = mpuRead16(0x3D);
+  int16_t az = mpuRead16(0x3F);
+  int16_t gx = mpuRead16(0x43);
+  int16_t gy = mpuRead16(0x45);
+  int16_t gz = mpuRead16(0x47);
+
+  out.printf(
+    "SENS {\"vbat\":%.2f,\"ibat\":%.2f,\"dist\":%ld,"
+    "\"cliff\":%s,\"bL\":%s,\"bR\":%s,"
+    "\"L\":%d,\"R\":%d,\"vac\":%s,\"brush\":%s,"
+    "\"ax\":%d,\"ay\":%d,\"az\":%d,"
+    "\"gx\":%d,\"gy\":%d,\"gz\":%d}\n",
+    readVoltage(), readCurrent(), readUS_cm(),
+    cliff()?"true":"false",
+    bumpL()?"true":"false", bumpR()?"true":"false",
+    cmdLeft, cmdRight,
+    vacOn?"true":"false", brushOn?"true":"false",
+    ax, ay, az, gx, gy, gz
+  );
+}
+
+void handleLine(const String& ln, Stream& out){
+  if (ln.startsWith("M ")){
+    int l,r; if (sscanf(ln.c_str(),"M %d %d",&l,&r)==2){ setWheels(l,r); out.println("OK M"); }
+    else out.println("ERR M");
+  } else if (ln=="S" || ln=="STAT"){
+    printStatus(out);
+  } else if (ln=="STOP"){
+    stopAll(); out.println("OK STOP");
+  } else if (ln=="HELP"){
+    out.println("CMD: V/B/L/R (toggle) | M L R | S | STOP | HELP");
+  } else if (ln.length()){
+    out.println("ERR CMD (HELP)");
+  }
+}
+
+/**** Setup ****/
+void setup(){
+  Serial.begin(PC_BAUD);
+  Serial2.begin(PI_BAUD, SERIAL_8N1, PI_RX, PI_TX);
+
+  Wire.begin(21,22);
+  mpuInit();
+
+  // Relés: arranque apagado
+  if (RELAY_ACTIVE_LOW){ digitalWrite(RELAY_VAC,HIGH); digitalWrite(RELAY_BRUSH,HIGH); }
+  else                 { digitalWrite(RELAY_VAC,LOW);  digitalWrite(RELAY_BRUSH,LOW);  }
+  pinMode(RELAY_VAC,   OUTPUT);
+  pinMode(RELAY_BRUSH, OUTPUT);
+  setVac(false);
+  setBrush(false);
+
+  // L298N
+  pinMode(ENA,OUTPUT); pinMode(IN1,OUTPUT); pinMode(IN2,OUTPUT);
+  pinMode(ENB,OUTPUT); pinMode(IN3,OUTPUT); pinMode(IN4,OUTPUT);
+  setWheels(0,0);
+
+  // Sensores
+  pinMode(PIN_BUMP_L, INPUT_PULLUP);
+  pinMode(PIN_BUMP_R, INPUT_PULLUP);
+  pinMode(PIN_IR_CLIFF, INPUT);
+  pinMode(PIN_US_TRIG, OUTPUT);
+  pinMode(PIN_US_ECHO, INPUT);
+
+  // ADC
+  analogReadResolution(12);
+  analogSetPinAttenuation(PIN_VOLTAGE, ADC_11db);
+  analogSetPinAttenuation(PIN_CURRENT, ADC_11db);
+  const int N=200; uint32_t acc=0;
+  for(int i=0;i<N;i++){ acc += analogRead(PIN_CURRENT); delay(2); }
+  acs_vref = ( (float)acc / N ) / 4095.0f * 3.3f;
+
+  Serial.println("READY. Comandos: V/B/L/R toggles, 'M L R' + Enter, 'S' sensores crudos MPU, 'HELP'.");
+}
+
+/**** Loop ****/
+void loop(){
+  // Toggles instantáneos
+  auto handleChar = [&](Stream& src, char c){
+    switch(c){
+      case 'V': case 'v': setVac(!vacOn);    src.printf("VAC -> %s\n", vacOn?"ON":"OFF"); break;
+      case 'B': case 'b': setBrush(!brushOn);src.printf("BRUSH -> %s\n", brushOn?"ON":"OFF"); break;
+      case 'L': case 'l': leftWheel(!leftOn);src.printf("LEFT -> %s\n", leftOn?"ON":"OFF"); break;
+      case 'R': case 'r': rightWheel(!rightOn);src.printf("RIGHT -> %s\n", rightOn?"ON":"OFF"); break;
+      case 'S': case 's': printStatus(src); break;
+      default: break;
+    }
+  };
+  while(Serial.available()){
+    char c=Serial.peek(); if (c=='\n'||c=='\r') break;
+    c=Serial.read(); if (c!='\n'&&c!='\r') handleChar(Serial,c);
+  }
+  while(Serial2.available()){
+    char c=Serial2.peek(); if (c=='\n'||c=='\r') break;
+    c=Serial2.read(); if (c!='\n'&&c!='\r') handleChar(Serial2,c);
+  }
+
+  // Comandos por línea
+  String line;
+  if (readLineFrom(Serial,  bufPC, line)) handleLine(line,  Serial);
+  if (readLineFrom(Serial2, bufPI, line)) handleLine(line, Serial2);
+
+  // Eventos (bumpers y cliff)
+  unsigned long now = millis();
+  int sBL = digitalRead(PIN_BUMP_L);
+  if (sBL!=lastBL && (now-tBL)>DEBOUNCE_MS){
+    tBL=now; lastBL=sBL;
+    broadcast(String("EVENT {\"type\":\"bumperL\",\"pressed\":") + (sBL==LOW?"true":"false")+"}\n");
+  }
+  int sBR = digitalRead(PIN_BUMP_R);
+  if (sBR!=lastBR && (now-tBR)>DEBOUNCE_MS){
+    tBR=now; lastBR=sBR;
+    broadcast(String("EVENT {\"type\":\"bumperR\",\"pressed\":") + (sBR==LOW?"true":"false")+"}\n");
+  }
+  int sCl = digitalRead(PIN_IR_CLIFF);
+  if (sCl!=lastCliff && (now-tCliff)>DEBOUNCE_MS){
+    tCliff=now; lastCliff=sCl;
+    broadcast(String("EVENT {\"type\":\"cliff\",\"detected\":") + (sCl==HIGH?"true":"false")+"}\n");
+  }
+}

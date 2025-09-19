@@ -1,0 +1,127 @@
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from lgpio: No module named 'lgpio'
+  warnings.warn(
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from rpigpio: No module named 'RPi'
+  warnings.warn(
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from pigpio: No module named 'pigpio'
+  warnings.warn(
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from native: unable to open /dev/gpiomem or /dev/mem; upgrade your kernel or run as root
+  warnings.warn(
+? Servos MQTT conectado, esperando comandos en servos/angle
+[MQTT] servos/angle = 0
+Traceback (most recent call last):
+  File "/home/emanuel/servos_mqtt.py", line 96, in <module>
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 2297, in loop_forever
+    rc = self._loop(timeout)
+         ^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 1686, in _loop
+    rc = self.loop_read()
+         ^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 2100, in loop_read
+    rc = self._packet_read()
+         ^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 3142, in _packet_read
+    rc = self._packet_handle()
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 3808, in _packet_handle
+    return self._handle_publish()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 4145, in _handle_publish
+    self._handle_on_message(message)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 4501, in _handle_on_message
+    on_message(self, self._userdata, message)
+  File "/home/emanuel/servos_mqtt.py", line 89, in on_message
+  File "/home/emanuel/servos_mqtt.py", line 77, in handle_command
+  File "/home/emanuel/servos_mqtt.py", line 45, in move_once
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/output_devices.py", line 1503, in __init__
+    pwm_device=PWMOutputDevice(
+               ^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from lgpio: No module named 'lgpio'
+  warnings.warn(
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from rpigpio: No module named 'RPi'
+  warnings.warn(
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from pigpio: No module named 'pigpio'
+  warnings.warn(
+/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from native: unable to open /dev/gpiomem or /dev/mem; upgrade your kernel or run as root
+  warnings.warn(
+? Servos MQTT conectado, esperando comandos en servos/angle
+[MQTT] servos/angle = 0
+Traceback (most recent call last):
+  File "/home/emanuel/servos_mqtt.py", line 96, in <module>
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 2297, in loop_forever
+    rc = self._loop(timeout)
+         ^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 1686, in _loop
+    rc = self.loop_read()
+         ^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 2100, in loop_read
+    rc = self._packet_read()
+         ^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 3142, in _packet_read
+    rc = self._packet_handle()
+         ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 3808, in _packet_handle
+    return self._handle_publish()
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 4145, in _handle_publish
+    self._handle_on_message(message)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/paho/mqtt/client.py", line 4501, in _handle_on_message
+    on_message(self, self._userdata, message)
+  File "/home/emanuel/servos_mqtt.py", line 89, in on_message
+  File "/home/emanuel/servos_mqtt.py", line 77, in handle_command
+  File "/home/emanuel/servos_mqtt.py", line 45, in move_once
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/output_devices.py", line 1503, in __init__
+    pwm_device=PWMOutputDevice(
+               ^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 108, in __call__
+    self = super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/output_devices.py", line 392, in __init__
+    super().__init__(pin, active_high=active_high, initial_value=None,
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/output_devices.py", line 74, in __init__
+    super().__init__(pin, pin_factory=pin_factory)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/mixins.py", line 75, in __init__
+    super().__init__(*args, **kwargs)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 544, in __init__
+    super().__init__(pin_factory=pin_factory)
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 245, in __init__
+    Device.ensure_pin_factory()
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 270, in ensure_pin_factory
+    Device.pin_factory = Device._default_pin_factory()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/emanuel/ojos-env/lib/python3.11/site-packages/gpiozero/devices.py", line 302, in _default_pin_factory
+    raise BadPinFactory('Unable to load any default pin factory!')
+gpiozero.exc.BadPinFactory: Unable to load any default pin factory!
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version
+/home/emanuel/servos_mqtt.py:91: DeprecationWarning: Callback API version 1 is deprecated, update to latest version

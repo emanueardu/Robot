@@ -1,0 +1,18 @@
+# guarda como test_cam.py y ejecuta: python test_cam.py
+import cv2
+cap = cv2.VideoCapture(0)              # /dev/video0
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640) # baja resolución = menos CPU
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+if not cap.isOpened():
+    raise RuntimeError("No pude abrir la cámara USB")
+
+while True:
+    ok, frame = cap.read()
+    if not ok: break
+    cv2.imshow("USB Cam", frame)
+    if cv2.waitKey(1) & 0xFF == 27:    # ESC para salir
+        break
+
+cap.release()
+cv2.destroyAllWindows()
